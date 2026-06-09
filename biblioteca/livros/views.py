@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions 
 from .models import Autor, Livro, Dispositivo
-from .serializers import AutorSerializer, LivroSerializer
+from .serializers import AutorSerializer, LivroSerializer, TokenFirebaseSerializer, NotificacaoFirebaseSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from firebase_admin import messaging
@@ -21,20 +21,33 @@ class FirebaseNotificationViewSet(viewsets.GenericViewSet):
     """
     queryset = Dispositivo.objects.all()
     permission_classes = [permissions.AllowAny]
-    serializer_class = None
 
-    # URL gerada: POST /api/firebase/tokens/
+    def get_serializer_class(self):
+        """
+        Retorna o serializer correto baseado na rota para o Swagger mapear sem erros.
+        """
+        if getattr(self, 'swagger_fake_view', False):
+            return TokenFirebaseSerializer  # Evita quebras genéricas do swagger na inicialização
+            
+        if self.action == 'registro_token':
+            return TokenFirebaseSerializer
+        if self.action == 'notificacao':
+            return NotificacaoFirebaseSerializer
+        return None
+
     @action(detail=False, methods=['post'], url_path='tokens')
     def registro_token(self, request):
         """
         Cria ou atualiza um recurso de token de dispositivo.
         """
-        dados = request.data
+        # Utiliza o serializer para validar os dados recebidos
+        serializer = TokenFirebaseSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        dados = serializer.validated_data
         token = dados.get("token")
         usuario = dados.get("usuario")
-
-        if not token or not usuario:
-            return Response({"erro": "Campos 'token' e 'usuario' são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
 
         dispositivo, criado = Dispositivo.objects.update_or_create(
             usuario=usuario,
@@ -42,19 +55,20 @@ class FirebaseNotificationViewSet(viewsets.GenericViewSet):
         )
         return Response({"mensagem": "Token registrado com sucesso."}, status=status.HTTP_200_OK)
 
-    # URL gerada: POST /api/firebase/notificacoes/
     @action(detail=False, methods=['post'], url_path='notificacoes')
     def notificacao(self, request):
         """
         Envia uma nova mensagem/notificação para o recurso de dispositivo especificado.
         """
-        dados = request.data
+        # Utiliza o serializer para validar os dados recebidos
+        serializer = NotificacaoFirebaseSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        dados = serializer.validated_data
         usuario = dados.get("usuario")
         titulo = dados.get("titulo")
         corpo = dados.get("body")
-
-        if not usuario or not titulo or not corpo:
-            return Response({"erro": "Campos 'usuario', 'titulo' e 'body' são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             dispositivo = Dispositivo.objects.get(usuario=usuario)
