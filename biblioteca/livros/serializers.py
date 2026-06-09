@@ -33,3 +33,12 @@ class LivroSerializer(serializers.ModelSerializer):
             "self": reverse('livro-detail', args=[obj.pk], request=request), 
             "autor": reverse('autor-detail', args=[obj.autor.pk], request=request) 
         }
+
+class TokenFirebaseSerializer(serializers.Serializer):
+    usuario = serializers.CharField(max_length=100, help_text="Nome de usuário associado ao dispositivo.")
+    token = serializers.CharField(help_text="Token FCM gerado pelo dispositivo móvel.")
+
+class NotificacaoFirebaseSerializer(serializers.Serializer):
+    usuario = serializers.CharField(max_length=100, help_text="Nome do usuário que receberá a notificação.")
+    titulo = serializers.CharField(max_length=200, help_text="Título da mensagem Push.")
+    body = serializers.CharField(help_text="Corpo do texto da mensagem Push.")
