@@ -4,3 +4,4 @@ gunicorn
 drf-yasg
 djangorestframework-simplejwt
 django-cors-headers
+firebase-admin
