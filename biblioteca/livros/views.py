@@ -25,14 +25,13 @@ class FirebaseNotificationViewSet(viewsets.GenericViewSet):
     def get_serializer_class(self):
         """
         Retorna o serializer correto baseado na rota para o Swagger mapear sem erros.
-        """
-        if getattr(self, 'swagger_fake_view', False):
-            return TokenFirebaseSerializer  # Evita quebras genéricas do swagger na inicialização
-            
+        """ 
         if self.action == 'registro_token':
             return TokenFirebaseSerializer
         if self.action == 'notificacao':
             return NotificacaoFirebaseSerializer
+        if getattr(self, 'swagger_fake_view', False):
+            return TokenFirebaseSerializer  # Evita quebras genéricas do swagger na inicialização
         return None
 
     @action(detail=False, methods=['post'], url_path='tokens')
